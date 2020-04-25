@@ -17,6 +17,7 @@ type User struct {
 	Nickname  string    `gorm:"size:255;not null;unique" json:"nickname"`
 	Email     string    `gorm:"size:100;not null;unique" json:"email"`
 	Password  string    `gorm:"size:100;not null;" json:"password"`
+	Posts	  []Post   	`json:"posts"`
 	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
@@ -44,6 +45,7 @@ func (u *User) Prepare() {
 	u.Email = html.EscapeString(strings.TrimSpace(u.Email))
 	u.CreatedAt = time.Now()
 	u.UpdatedAt = time.Now()
+	u.Posts = []Post {}
 }
 
 func (u *User) Validate(action string) error {
@@ -108,6 +110,14 @@ func (u *User) FindAllUsers(db *gorm.DB) (*[]User, error) {
 	err = db.Debug().Model(&User{}).Limit(100).Find(&users).Error
 	if err != nil {
 		return &[]User{}, err
+	}
+	if len(users) > 0 {
+		for i, _ := range users {
+			err := db.Debug().Model(&Post{}).Where("author_id = ?", users[i].ID).Find(&users[i].Posts).Error
+			if err != nil {
+				return &[]User{}, err
+			}
+		}
 	}
 	return &users, err
 }
